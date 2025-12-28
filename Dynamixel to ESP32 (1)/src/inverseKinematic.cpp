@@ -145,15 +145,16 @@ void loop()
   }
 
   int ly = map(rawLY, -128, 127, 40, -40);
-  int lx = map(rawLX, -128, 127, 40, -40);
+  int lx = map(rawLX, -128, 127, -40, 40);
   int ry = map(rawRY, -128, 127, -40, 40);
 
   int targetX = 0;
   int targetY = 0;
   int targetZ = 0;
 
-  // leg1.inverseKinematic(ly, lx, ry);
-  leg1.inverseKinematic(targetX, targetY, targetZ);
+  leg1.inverseKinematic(ly, lx, ry);
+
+  // leg1.inverseKinematic(targetX, targetY, targetZ);
 
   sw_data[0].goal_position = leg1.getValCoxa();
   sw_data[1].goal_position = leg1.getValFemur();
@@ -162,10 +163,10 @@ void loop()
   sw_infos.is_info_changed = true;
 
   if(dxl.syncWrite(&sw_infos)){
-    DEBUG_SERIAL.println("Femur: ");
-    DEBUG_SERIAL.println(sw_data[1].goal_position);
-    DEBUG_SERIAL.println("Tibia: ");
-    DEBUG_SERIAL.println(sw_data[2].goal_position);
+    DEBUG_SERIAL.printf("Coxa(ly->x): %d \t Femur(lx->y): %d \t Tibia(ry->z): %d \n", 
+    sw_data[0].goal_position, 
+    sw_data[1].goal_position, 
+    sw_data[2].goal_position);
   }
 
   delay(100);
