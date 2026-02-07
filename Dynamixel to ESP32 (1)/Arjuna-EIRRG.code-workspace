@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../../Arjuna-EIRRG"
+		},
+		{
+			"name": "Dynamixel to ESP32 (1)",
+			"path": "."
+		}
+	],
+	"settings": {}
+}
