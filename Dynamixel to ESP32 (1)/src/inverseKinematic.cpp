@@ -7,6 +7,8 @@ int8_t rawRY;
 int8_t rawLY;
 int8_t rawLX;
 
+float move = 0;
+
 #define coxa 40
 #define femur 80
 #define tibia 62
@@ -18,6 +20,8 @@ HardwareSerial mySerial(2);
 #define DXL_SERIAL   Serial
 #define DEBUG_SERIAL Serial
 const int DXL_DIR_PIN = 4;
+
+const float LEG_ANGLES[6] = { PI, PI, PI, 0, 0, 0};
 
   float safeAcos(float x){
     x = constrain(x, -1.0f, 1.0f);
@@ -121,14 +125,19 @@ Dynamixel2Arduino dxl(mySerial, DXL_DIR_PIN);
 
 using namespace ControlTableItem;
 
-HexapodLeg leg1(coxa, femur, tibia);
-HexapodLeg leg2(coxa, femur, tibia);
-HexapodLeg leg3(coxa, femur, tibia);
-HexapodLeg leg4(coxa, femur, tibia);
-HexapodLeg leg5(coxa, femur, tibia);
-HexapodLeg leg6(coxa, femur, tibia);
+HexapodLeg legs[6] = {
+  HexapodLeg(coxa, femur, tibia),
+  HexapodLeg(coxa, femur, tibia),
+  HexapodLeg(coxa, femur, tibia),
+  HexapodLeg(coxa, femur, tibia),
+  HexapodLeg(coxa, femur, tibia),
+  HexapodLeg(coxa, femur, tibia)
+};
 
-
+float t = 0;
+float speed = 0.2;
+float step_hight = 40;
+float step_length = 40;
 
 void setup()
 {
@@ -165,83 +174,57 @@ void setup()
 
 void loop()
 {
+
+  t += speed;
+
   if(PS4.isConnected()){
-    rawRY = PS4.RStickY();
-    rawLY = PS4.LStickY();
-    rawLX = PS4.LStickX();
-  }else{
-    rawRY = 0;
-    rawLY = 0;
-    rawLX = 0;
+    if(PS4.R1()){
+      move = 1;
+    }
+    
   }
 
-  int ly = map(rawLY, -128, 127, 40, -40);
-  int lx = map(rawLX, -128, 127, -40, 40);
-  int ry = map(rawRY, -128, 127, -40, 40);
-  
+  for (int i = 0; i < 6; i++){
+    // Grouping Tripod gait
+    bool leg_group = (i % 2 == 0);
+    float phase = (leg_group) ? t : t + PI;
 
-  int targetX = 0;
-  int targetY = 0;
-  int targetZ = 0;
+    // Calculate Trajectory (sine wave)
+    float W_Y = (step_length * cos(phase)) * move;
+    float W_X = 0;
 
-  leg1.inverseKinematic(ly, lx, ry);
-  leg2.inverseKinematic(ly, lx, ry);
-  leg3.inverseKinematic(ly, lx, ry);
-  leg4.inverseKinematic(ly, lx, ry);
-  leg5.inverseKinematic(ly, lx, ry);
-  leg6.inverseKinematic(ly, lx, ry);
+    // Cordinate Rotation (to keep legs parallel)
+    float theta = LEG_ANGLES[i];
+    float lx = -W_X * sin(theta) + W_Y * cos(theta);
+    float ly =  W_X * cos(theta) + W_Y * sin(theta);
 
+    // COUNT LEG LIFTS (Z)
+    float lz = 0;
+    if (sin(phase) > 0 && move > 0.1){
+      lz = step_hight * sin(phase);
 
-  // leg3.inverseKinematic(targetX, targetY, targetZ);
-  sw_data[0].goal_position = leg1.getValCoxa2();
-  sw_data[1].goal_position = leg1.getValFemur();
-  sw_data[2].goal_position = leg1.getValTibia2();
+    legs[i].inverseKinematic(lx, ly, lz);
 
-  sw_data[3].goal_position = leg2.getValCoxa();
-  sw_data[4].goal_position = leg2.getValFemur();
-  sw_data[5].goal_position = leg2.getValTibia();
+    int idx = i * 3;
 
-  sw_data[6].goal_position = leg3.getValCoxa2();
-  sw_data[7].goal_position = leg3.getValFemur();
-  sw_data[8].goal_position = leg3.getValTibia();
+    if (i < 3){
+      sw_data[idx].goal_position   = legs[i].getValCoxa();  
+      sw_data[idx+1].goal_position = legs[i].getValFemur2(); 
+      sw_data[idx+2].goal_position = legs[i].getValTibia2();
+    }
+    else {
+      sw_data[idx].goal_position   = legs[i].getValCoxa2();
+      sw_data[idx+1].goal_position = legs[i].getValFemur();  
+      sw_data[idx+2].goal_position = legs[i].getValTibia();
+    }
 
-  sw_data[9].goal_position = leg4.getValCoxa2();
-  sw_data[10].goal_position = leg4.getValFemur2();
-  sw_data[11].goal_position = leg4.getValTibia2();
+    }
 
-  sw_data[12].goal_position = leg5.getValCoxa();
-  sw_data[13].goal_position = leg5.getValFemur2();
-  sw_data[14].goal_position = leg5.getValTibia2();
-
-  sw_data[15].goal_position = leg6.getValCoxa();
-  sw_data[16].goal_position = leg6.getValFemur2();
-  sw_data[17].goal_position = leg6.getValTibia2();
+  }
 
   sw_infos.is_info_changed = true;
+  dxl.syncWrite(&sw_infos);
 
-  if(dxl.syncWrite(&sw_infos)){
-    DEBUG_SERIAL.printf("Coxa1(ly->x): %d ||mm:%d\t Femur1(lx->y): %d ||mm:%d\t Tibia1(ry->z): %d ||mm:%d\n\n", 
-    sw_data[0].goal_position,
-    ly,
-    sw_data[1].goal_position, 
-    lx,
-    sw_data[2].goal_position,
-    ry);
-    DEBUG_SERIAL.printf("Coxa3(ly->x): %d ||mm:%d\t Femur3(lx->y): %d ||mm:%d\t Tibia3(ry->z): %d ||mm:%d\n\n", 
-    sw_data[6].goal_position,
-    ly,
-    sw_data[7].goal_position, 
-    lx,
-    sw_data[8].goal_position,
-    ry);
-    DEBUG_SERIAL.printf("Coxa4(ly->x): %d ||mm:%d\t Femur4(lx->y): %d ||mm:%d\t Tibia4(ry->z): %d ||mm:%d\n\n",
-    sw_data[10].goal_position,
-    ly,
-    sw_data[11].goal_position,
-    lx,
-    sw_data[12].goal_position,
-    ry);
-  }
 
   delay(100);
 
