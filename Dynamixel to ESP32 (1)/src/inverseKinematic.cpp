@@ -197,7 +197,7 @@ void loop()
   sw_data[1].goal_position = leg1.getValFemur();
   sw_data[2].goal_position = leg1.getValTibia2();
 
-  sw_data[3].goal_position = leg2.getValCoxa();
+  sw_data[3].goal_position = leg2.getValCoxa2();
   sw_data[4].goal_position = leg2.getValFemur();
   sw_data[5].goal_position = leg2.getValTibia();
 
@@ -205,7 +205,7 @@ void loop()
   sw_data[7].goal_position = leg3.getValFemur();
   sw_data[8].goal_position = leg3.getValTibia();
 
-  sw_data[9].goal_position = leg4.getValCoxa2();
+  sw_data[9].goal_position = leg4.getValCoxa();
   sw_data[10].goal_position = leg4.getValFemur2();
   sw_data[11].goal_position = leg4.getValTibia2();
 
