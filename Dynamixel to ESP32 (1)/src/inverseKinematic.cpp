@@ -8,6 +8,7 @@ int8_t rawLY;
 int8_t rawLX;
 
 float move = 0;
+float acceleration = 0.02;
 
 #define coxa 40
 #define femur 80
@@ -135,9 +136,9 @@ HexapodLeg legs[6] = {
 };
 
 float t = 0;
-float speed = 0.2;
-float step_hight = 40;
-float step_length = 40;
+float speed = 0.02;
+float step_hight = 50;
+float step_length = 30;
 
 void setup()
 {
@@ -176,13 +177,29 @@ void loop()
 {
 
   t += speed;
-
+  float target_move = 0;
   if(PS4.isConnected()){
     if(PS4.R1()){
-      move = 1;
+      target_move = 1;
+    }else{
+      target_move = 0;
     }
     
   }
+
+  if (move < target_move){
+    move += acceleration;
+    if (move > target_move){
+      move = target_move;
+    }
+  }else if(move > target_move){
+    move -= acceleration;
+    if(move < target_move){
+      move = target_move;
+    }
+  }
+
+
 
   for (int i = 0; i < 6; i++){
     // Grouping Tripod gait
@@ -193,39 +210,40 @@ void loop()
     float W_Y = (step_length * cos(phase)) * move;
     float W_X = 0;
 
+    float lx = W_Y;
+    float ly = 0;
+
     // Cordinate Rotation (to keep legs parallel)
-    float theta = LEG_ANGLES[i];
-    float lx = -W_X * sin(theta) + W_Y * cos(theta);
-    float ly =  W_X * cos(theta) + W_Y * sin(theta);
+    // float theta = LEG_ANGLES[i];
+    // float lx = -W_X * sin(theta) + W_Y * cos(theta);
+    // float ly =  W_X * cos(theta) + W_Y * sin(theta);
 
     // COUNT LEG LIFTS (Z)
     float lz = 0;
     if (sin(phase) > 0 && move > 0.1){
       lz = step_hight * sin(phase);
+    }
 
     legs[i].inverseKinematic(lx, ly, lz);
 
     int idx = i * 3;
 
     if (i < 3){
-      sw_data[idx].goal_position   = legs[i].getValCoxa();  
-      sw_data[idx+1].goal_position = legs[i].getValFemur2(); 
-      sw_data[idx+2].goal_position = legs[i].getValTibia2();
-    }
-    else {
-      sw_data[idx].goal_position   = legs[i].getValCoxa2();
-      sw_data[idx+1].goal_position = legs[i].getValFemur();  
+      sw_data[idx].goal_position   = legs[i].getValCoxa2();  
+      sw_data[idx+1].goal_position = legs[i].getValFemur(); 
       sw_data[idx+2].goal_position = legs[i].getValTibia();
     }
-
+    else {
+      sw_data[idx].goal_position   = legs[i].getValCoxa();
+      sw_data[idx+1].goal_position = legs[i].getValFemur2();  
+      sw_data[idx+2].goal_position = legs[i].getValTibia2();
     }
-
   }
 
   sw_infos.is_info_changed = true;
   dxl.syncWrite(&sw_infos);
 
 
-  delay(100);
+  delay(5);
 
 }
