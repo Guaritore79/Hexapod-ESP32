@@ -177,6 +177,11 @@ void loop()
 {
 
   t += speed;
+
+  if (t > 2 * PI){
+    t -= 2 * PI;
+  }
+  
   float target_move = 0;
   if(PS4.isConnected()){
     if(PS4.R1()){
