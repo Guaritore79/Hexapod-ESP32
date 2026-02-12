@@ -9,7 +9,7 @@ int8_t rawLX;
 
 float move_x = 0;
 float move_y = 0;
-float acceleration = 0.02;
+float acceleration = 0.05;
 
 #define coxa 40
 #define femur 80
@@ -137,7 +137,7 @@ HexapodLeg legs[6] = {
 };
 
 float t = 0;
-float speed = 0.02;
+float speed = 0.06;
 float step_hight = 50;
 float step_length = 30;
 
@@ -284,6 +284,6 @@ void loop()
   dxl.syncWrite(&sw_infos);
 
 
-  delay(5);
+  delay(10);
 
 }
