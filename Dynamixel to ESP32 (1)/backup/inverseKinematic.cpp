@@ -1,13 +1,11 @@
 #include <Dynamixel2Arduino.h>
 #include <PS4Controller.h>
-#include <math.h>
+// #include <math.h>
 
 #define PS4add "74:f2:fa:dd:f4:8c"
-int8_t rawRY;
-int8_t rawLY;
-int8_t rawLX;
 
-float move = 0;
+float move_x = 0;
+float move_y = 0;
 float acceleration = 0.02;
 
 #define coxa 40
@@ -45,8 +43,8 @@ class HexapodLeg{
     }
 
     void inverseKinematic(float xInput, float yInput, float zInput){
-      float yRest = 80; //posisi femur diam
-      float zRest = -62; //posisi tibia diam
+      float yRest = 100; //posisi femur diam
+      float zRest = -40; //posisi tibia diam
 
       float yTotal = yRest - yInput;
       float zTotal = zRest - zInput;
@@ -136,9 +134,9 @@ HexapodLeg legs[6] = {
 };
 
 float t = 0;
-float speed = 0.02;
-float step_hight = 50;
-float step_length = 30;
+float speed = 0.05;
+float step_hight = 25;
+float step_length = 20;
 
 void setup()
 {
@@ -181,28 +179,44 @@ void loop()
   if (t > 2 * PI){
     t -= 2 * PI;
   }
-  
-  float target_move = 0;
+
+  float target_move_x = 0;
+  float target_move_y = 0;
+
   if(PS4.isConnected()){
-    if(PS4.R1()){
-      target_move = 1;
-    }else{
-      target_move = 0;
-    }
-    
+    //forward backward
+    if(PS4.Up()) target_move_x = 1;
+    else if(PS4.Down()) target_move_x = -1;
+
+    if(PS4.Right()) target_move_y = 1;
+    else if(PS4.Left()) target_move_y = -1;
   }
 
-  if (move < target_move){
-    move += acceleration;
-    if (move > target_move){
-      move = target_move;
+  if (move_x < target_move_x){
+    move_x += acceleration;
+    if (move_x > target_move_x){
+      move_x = target_move_x;
     }
-  }else if(move > target_move){
-    move -= acceleration;
-    if(move < target_move){
-      move = target_move;
+  }else if(move_x > target_move_x){
+    move_x -= acceleration;
+    if(move_x< target_move_x){
+      move_x = target_move_x;
     }
   }
+
+
+  if (move_y < target_move_y){
+  move_y += acceleration;
+  if (move_y > target_move_y){
+    move_y = target_move_y;
+  }
+  }else if(move_y > target_move_y){
+    move_y -= acceleration;
+    if(move_y< target_move_y){
+      move_y = target_move_y;
+    }
+  }
+
 
 
 
@@ -212,20 +226,24 @@ void loop()
     float phase = (leg_group) ? t : t + PI;
 
     // Calculate Trajectory (sine wave)
-    float W_Y = (step_length * cos(phase)) * move;
-    float W_X = 0;
+    float amplitude = (step_length * cos(phase));
 
-    float lx = W_Y;
+    float lx = 0;
+    float W_X = amplitude * move_x;
+    float W_Y = amplitude * move_y;
+    
+    if(i < 3){
+      lx = W_X + W_Y;
+    }else{
+      lx = W_X - W_Y;
+    }
+
     float ly = 0;
-
-    // Cordinate Rotation (to keep legs parallel)
-    // float theta = LEG_ANGLES[i];
-    // float lx = -W_X * sin(theta) + W_Y * cos(theta);
-    // float ly =  W_X * cos(theta) + W_Y * sin(theta);
+  
 
     // COUNT LEG LIFTS (Z)
     float lz = 0;
-    if (sin(phase) > 0 && move > 0.1){
+    if (sin(phase) > 0 && (abs(move_x) > 0.1 || abs(move_y) > 0.1)){
       lz = step_hight * sin(phase);
     }
 
@@ -235,13 +253,13 @@ void loop()
 
     if (i < 3){
       sw_data[idx].goal_position   = legs[i].getValCoxa2();  
-      sw_data[idx+1].goal_position = legs[i].getValFemur(); 
-      sw_data[idx+2].goal_position = legs[i].getValTibia();
+      sw_data[idx+1].goal_position = legs[i].getValFemur2(); 
+      sw_data[idx+2].goal_position = legs[i].getValTibia2();
     }
     else {
       sw_data[idx].goal_position   = legs[i].getValCoxa();
-      sw_data[idx+1].goal_position = legs[i].getValFemur2();  
-      sw_data[idx+2].goal_position = legs[i].getValTibia2();
+      sw_data[idx+1].goal_position = legs[i].getValFemur();  
+      sw_data[idx+2].goal_position = legs[i].getValTibia();
     }
   }
 
